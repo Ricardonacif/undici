@@ -190,6 +190,37 @@ test('get with host header', (t) => {
   })
 })
 
+test('get with host header (IPv6)', (t) => {
+  t.plan(7)
+
+  const server = createServer((req, res) => {
+    t.equal('/', req.url)
+    t.equal('GET', req.method)
+    t.equal('[::1]', req.headers.host)
+    res.setHeader('content-type', 'text/plain')
+    res.end('hello from ' + req.headers.host)
+  })
+  t.teardown(server.close.bind(server))
+
+  server.listen(0, '::', () => {
+    const client = new Client(`http://[::1]:${server.address().port}`)
+    t.teardown(client.close.bind(client))
+
+    client.request({ path: '/', method: 'GET', headers: { host: '[::1]' } }, (err, { statusCode, headers, body }) => {
+      t.error(err)
+      t.equal(statusCode, 200)
+      t.equal(headers['content-type'], 'text/plain')
+      const bufs = []
+      body.on('data', (buf) => {
+        bufs.push(buf)
+      })
+      body.on('end', () => {
+        t.equal('hello from [::1]', Buffer.concat(bufs).toString('utf8'))
+      })
+    })
+  })
+})
+
 test('head with host header', (t) => {
   t.plan(7)
 
@@ -1004,6 +1035,8 @@ test('connected', (t) => {
   t.plan(7)
 
   const server = createServer((req, res) => {
+    // needed so that disconnect is emitted
+    res.setHeader('connection', 'close')
     req.pipe(res)
   })
   t.teardown(server.close.bind(server))
@@ -1024,7 +1057,7 @@ test('connected', (t) => {
       t.equal(client, self)
     })
 
-    t.equal(client[kConnected], 0)
+    t.equal(client[kConnected], false)
     client[kConnect](() => {
       client.request({
         path: '/',
@@ -1032,7 +1065,7 @@ test('connected', (t) => {
       }, (err) => {
         t.error(err)
       })
-      t.equal(client[kConnected], 1)
+      t.equal(client[kConnected], true)
     })
   })
 })
@@ -1049,9 +1082,9 @@ test('emit disconnect after destroy', t => {
     const url = new URL(`http://localhost:${server.address().port}`)
     const client = new Client(url)
 
-    t.equal(client[kConnected], 0)
+    t.equal(client[kConnected], false)
     client[kConnect](() => {
-      t.equal(client[kConnected], 1)
+      t.equal(client[kConnected], true)
       let disconnected = false
       client.on('disconnect', () => {
         disconnected = true
@@ -1122,6 +1155,29 @@ test('parser pause with no body timeout', (t) => {
     t.teardown(client.close.bind(client))
 
     client.request({ path: '/', method: 'GET' }, (err, { statusCode, body }) => {
+      t.error(err)
+      t.equal(statusCode, 200)
+      body.resume()
+    })
+  })
+})
+
+test('TypedArray and DataView body', (t) => {
+  t.plan(3)
+  const server = createServer((req, res) => {
+    t.equal(req.headers['content-length'], '8')
+    res.end()
+  })
+  t.teardown(server.close.bind(server))
+
+  server.listen(0, () => {
+    const client = new Client(`http://localhost:${server.address().port}`, {
+      bodyTimeout: 0
+    })
+    t.teardown(client.close.bind(client))
+
+    const body = Uint8Array.from(Buffer.alloc(8))
+    client.request({ path: '/', method: 'POST', body }, (err, { statusCode, body }) => {
       t.error(err)
       t.equal(statusCode, 200)
       body.resume()

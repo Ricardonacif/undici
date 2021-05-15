@@ -196,17 +196,17 @@ Returns: `void`
 * **method** `string`
 * **body** `string | Buffer | Uint8Array | stream.Readable | null` (optional) - Default: `null`
 * **headers** `UndiciHeaders` (optional) - Default: `null`
-* **idempotent** `boolean` (optional) - Default: `true` if `method` is `'HEAD'` or `'GET'` - Whether the requests can be safely retried or not. If `false` the request won't be sent until all preceeding requests in the pipeline has completed.
+* **idempotent** `boolean` (optional) - Default: `true` if `method` is `'HEAD'` or `'GET'` - Whether the requests can be safely retried or not. If `false` the request won't be sent until all preceding requests in the pipeline has completed.
 * **upgrade** `string | null` (optional) - Default: `null` - Upgrade the request. Should be used to specify the kind of upgrade i.e. `'Websocket'`.
 
 #### Parameter: `DispatchHandlers`
 
-* **onConnect** `(abort: () => void) => void` - Invoked before request is dispatched on socket. May be invoked multiple times when a request is retried when the request at the head of the pipeline fails.
+* **onConnect** `(abort: () => void, context: object) => void` - Invoked before request is dispatched on socket. May be invoked multiple times when a request is retried when the request at the head of the pipeline fails.
 * **onError** `(error: Error) => void` - Invoked when an error has occurred.
-* **onUpgrade** `(statusCode: number, headers: Buffer[] | null, socket: Duplex) => void` (optional) - Invoked when request is upgraded. Required if `DispatchOptions.upgrade` is defined or `DispatchOptions.method === 'CONNECT'`.
-* **onHeaders** `(statusCode: number, headers: Buffer[] | null, resume: () => void) => boolean` - Invoked when statusCode and headers have been received. May be invoked multiple times due to 1xx informational headers. Not required for `upgrade` requests.
+* **onUpgrade** `(statusCode: number, headers: Buffer[], socket: Duplex) => void` (optional) - Invoked when request is upgraded. Required if `DispatchOptions.upgrade` is defined or `DispatchOptions.method === 'CONNECT'`.
+* **onHeaders** `(statusCode: number, headers: Buffer[], resume: () => void) => boolean` - Invoked when statusCode and headers have been received. May be invoked multiple times due to 1xx informational headers. Not required for `upgrade` requests.
 * **onData** `(chunk: Buffer) => boolean` - Invoked when response payload data is received. Not required for `upgrade` requests.
-* **onComplete** `(trailers: Buffer[] | null) => void` - Invoked when response payload and trailers have been received and the request has completed. Not required for `upgrade` requests.
+* **onComplete** `(trailers: Buffer[]) => void` - Invoked when response payload and trailers have been received and the request has completed. Not required for `upgrade` requests.
 
 #### Example 1 - Dispatch GET request
 
@@ -327,6 +327,7 @@ Extends: [`RequestOptions`](#parameter-requestoptions)
 * **headers** `IncomingHttpHeaders`
 * **opaque** `unknown`
 * **body** `stream.Readable`
+* **context** `object`
 
 #### Example 1 - Pipeline Echo
 
@@ -419,6 +420,7 @@ The `RequestOptions.method` property should not be value `'CONNECT'`.
 * **trailers** `Record<string, string>` - This object starts out
   as empty and will be mutated to contain trailers after `body` has emitted `'end'`.
 * **opaque** `unknown`
+* **context** `object`
 
 #### Example 1 - Basic GET Request
 
@@ -567,6 +569,7 @@ Returns: `void | Promise<StreamData>` - Only returns a `Promise` if no `callback
 
 * **opaque** `unknown`
 * **trailers** `Record<string, string>`
+* **context** `object`
 
 #### Example 1 - Basic GET stream request
 
@@ -743,6 +746,17 @@ Parameters:
 * **origin** `URL`
 * **targets** `Array<Dispatcher>`
 * **error** `Error`
+
+### Event: `'connectionError'`
+
+Parameters:
+
+* **origin** `URL`
+* **targets** `Array<Dispatcher>`
+* **error** `Error`
+
+Emitted when dispatcher fails to connect to
+origin.
 
 ### Event: `'drain'`
 

@@ -17,19 +17,31 @@ npm i undici
 
 ## Benchmarks
 
-Machine: AMD EPYC 7502P
+The benchmark is a simple `hello world` [example](benchmarks/benchmark.js) using a
+number of unix sockets (connections) with a pipelining depth of 10 running on Node 16.
+The benchmarks below have the [simd](https://github.com/WebAssembly/simd) feature enabled.
 
-Node 15
-```
-http - keepalive x 12,028 ops/sec ±2.60% (265 runs sampled)
-undici - pipeline x 31,321 ops/sec ±0.77% (276 runs sampled)
-undici - request x 36,612 ops/sec ±0.71% (277 runs sampled)
-undici - stream x 41,291 ops/sec ±0.90% (268 runs sampled)
-undici - dispatch x 47,319 ops/sec ±1.17% (263 runs sampled)
-```
+### Connections 1
 
-The benchmark is a simple `hello world` [example](benchmarks/index.js) using a
-single unix socket with pipelining.
+| Tests               | Samples |        Result | Tolerance | Difference with slowest |
+|---------------------|---------|---------------|-----------|-------------------------|
+| http - no keepalive |      15 |  4.63 req/sec |  ± 2.77 % |                       - |
+| http - keepalive    |      10 |  4.81 req/sec |  ± 2.16 % |                + 3.94 % |
+| undici - stream     |      25 | 62.22 req/sec |  ± 2.67 % |             + 1244.58 % |
+| undici - dispatch   |      15 | 64.33 req/sec |  ± 2.47 % |             + 1290.24 % |
+| undici - request    |      15 | 66.08 req/sec |  ± 2.48 % |             + 1327.88 % |
+| undici - pipeline   |      10 | 66.13 req/sec |  ± 1.39 % |             + 1329.08 % |
+
+### Connections 50
+
+| Tests               | Samples |           Result | Tolerance | Difference with slowest |
+|---------------------|---------|------------------|-----------|-------------------------|
+| http - no keepalive |      50 |  3546.49 req/sec |  ± 2.90 % |                       - |
+| http - keepalive    |      15 |  5692.67 req/sec |  ± 2.48 % |               + 60.52 % |
+| undici - pipeline   |      25 |  8478.71 req/sec |  ± 2.62 % |              + 139.07 % |
+| undici - request    |      20 |  9766.66 req/sec |  ± 2.79 % |              + 175.39 % |
+| undici - stream     |      15 | 10109.74 req/sec |  ± 2.94 % |              + 185.06 % |
+| undici - dispatch   |      25 | 10949.73 req/sec |  ± 2.54 % |              + 208.75 % |
 
 ## Quick Start
 
@@ -69,8 +81,6 @@ Arguments:
 
 Returns a promise with the result of the `Dispatcher.request` method.
 
-`url` may contain pathname. `options` may not contain path.
-
 Calls `options.dispatcher.request(options)`.
 
 See [Dispatcher.request](./docs/api/Dispatcher.md#dispatcherrequestoptions-callback) for more details.
@@ -83,6 +93,7 @@ Arguments:
 * **options** [`StreamOptions`](./docs/api/Dispatcher.md#parameter-streamoptions)
   * **dispatcher** `Dispatcher` - Default: [getGlobalDispatcher](#undicigetglobaldispatcherdispatcher)
   * **method** `String` - Default: `PUT` if `options.body`, otherwise `GET`
+  * **maxRedirections** `Integer` - Default: `0`
 * **factory** `Dispatcher.stream.factory`
 
 Returns a promise with the result of the `Dispatcher.stream` method.
@@ -99,6 +110,7 @@ Arguments:
 * **options** [`PipelineOptions`](docs/api/Dispatcher.md#parameter-pipelineoptions)
   * **dispatcher** `Dispatcher` - Default: [getGlobalDispatcher](#undicigetglobaldispatcherdispatcher)
   * **method** `String` - Default: `PUT` if `options.body`, otherwise `GET`
+  * **maxRedirections** `Integer` - Default: `0`
 * **handler** `Dispatcher.pipeline.handler`
 
 Returns: `stream.Duplex`
@@ -116,6 +128,7 @@ Arguments:
 * **url** `string | URL | object`
 * **options** [`ConnectOptions`](docs/api/Dispatcher.md#parameter-connectoptions)
   * **dispatcher** `Dispatcher` - Default: [getGlobalDispatcher](#undicigetglobaldispatcherdispatcher)
+  * **maxRedirections** `Integer` - Default: `0`
 * **callback** `(err: Error | null, data: ConnectData | null) => void` (optional)
 
 Returns a promise with the result of the `Dispatcher.connect` method.
@@ -133,6 +146,7 @@ Arguments:
 * **url** `string | URL | object`
 * **options** [`UpgradeOptions`](docs/api/Dispatcher.md#parameter-upgradeoptions)
   * **dispatcher** `Dispatcher` - Default: [getGlobalDispatcher](#undicigetglobaldispatcherdispatcher)
+  * **maxRedirections** `Integer` - Default: `0`
 * **callback** `(error: Error | null, data: UpgradeData) => void` (optional)
 
 Returns a promise with the result of the `Dispatcher.upgrade` method.
@@ -145,11 +159,11 @@ See [Dispatcher.upgrade](docs/api/Dispatcher.md#dispatcherupgradeoptions-callbac
 
 * dispatcher `Dispatcher`
 
-Sets the global dispatcher used by global API methods.
+Sets the global dispatcher used by Common API Methods.
 
 ### `undici.getGlobalDispatcher()`
 
-Gets the global dispatcher used by global API methods.
+Gets the global dispatcher used by Common API Methods.
 
 Returns: `Dispatcher`
 
@@ -168,7 +182,7 @@ Refs: https://tools.ietf.org/html/rfc7231#section-5.1.1
 
 ### Pipelining
 
-Uncidi will only use pipelining if configured with a `pipelining` factor
+Undici will only use pipelining if configured with a `pipelining` factor
 greater than `1`.
 
 Undici always assumes that connections are persistent and will immediately

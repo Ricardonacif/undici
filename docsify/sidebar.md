@@ -10,6 +10,8 @@
   * [MockClient](/docs/api/MockClient.md "Undici API - MockClient")
   * [MockPool](/docs/api/MockPool.md "Undici API - MockPool")
   * [MockAgent](/docs/api/MockAgent.md "Undici API - MockAgent")
+  * [MockErrors](/docs/api/MockErrors.md "Undici API - MockErrors")
   * [API Lifecycle](/docs/api/api-lifecycle.md "Undici API - Lifecycle")
 * Best Practices
   * [Proxy](docs/best-practices/proxy.md "Connecting through a proxy")
+  * [Writing Tests](docs/best-practices/writing-tests.md "Using Undici inside tests")
